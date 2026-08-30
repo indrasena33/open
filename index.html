@@ -20,13 +20,16 @@
     </div>
 
     <script>
-        // Replace with your actual Render Web Service URL
-        const RENDER_API_URL = 'https://myspace-rlak.onrender.com/api/content';
+        // Updated to use the correct Render backend URL
+        const RENDER_API_URL = 'https://open-jad2.onrender.com/api/content';
         let lastHtmlContent = "";
 
         async function loadLatestContent() {
             try {
                 const response = await fetch(RENDER_API_URL);
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
                 const data = await response.json();
                 const htmlContent = data.html;
                 
