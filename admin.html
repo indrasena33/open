@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Admin Panel</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 450px; }
+        textarea { width: 100%; height: 140px; margin-top: 5px; margin-bottom: 15px; padding: 10px; box-sizing: border-box; }
+        input[type="password"], input[type="file"] { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; width: 100%; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        .hidden { display: none; }
+        .error { color: red; font-size: 0.9em; margin-bottom: 10px; }
+        .status { margin-top: 8px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="login-container" class="card">
+        <h2>Admin Login</h2>
+        <p>Enter your secure password:</p>
+        <input type="password" id="admin-password" placeholder="Password">
+        <div id="login-error" class="error"></div>
+        <button onclick="authenticateAdmin()">Login</button>
+    </div>
+
+    <!-- Admin Content Dashboard -->
+    <div id="admin-dashboard" class="card hidden">
+        <h2>Content Dashboard</h2>
+        
+        <label><b>Upload Media or HTML File:</b></label>
+        <input type="file" id="media-file-input" accept="image/*,video/*,audio/*,.html">
+        <button onclick="uploadMediaFile()" style="background: #17a2b8;">Upload File</button>
+        <div id="media-status" class="status"></div>
+
+        <hr style="margin: 20px 0; border:0; border-top:1px solid #ddd;">
+
+        <label><b>Generated HTML Code:</b></label>
+        <textarea id="html-input" placeholder="Tags will appear here automatically..."></textarea>
+        
+        <button onclick="publishContent()" style="background: #28a745;">Publish Content</button>
+        <div id="upload-status" class="status"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://myspace-rlak.onrender.com';
+        let storedPassword = "";
+
+        async function authenticateAdmin() {
+            const passwordInput = document.getElementById('admin-password').value;
+            const errorDiv = document.getElementById('login-error');
+            errorDiv.textContent = "Connecting to server...";
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: passwordInput })
+                });
+                
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    storedPassword = passwordInput;
+                    document.getElementById('login-container').classList.add('hidden');
+                    document.getElementById('admin-dashboard').classList.remove('hidden');
+                } else {
+                    errorDiv.textContent = data.error || 'Invalid Password';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server connection failed.';
+            }
+        }
+
+        async function uploadMediaFile() {
+            const fileInput = document.getElementById('media-file-input');
+            const statusDiv = document.getElementById('media-status');
+            const htmlTextarea = document.getElementById('html-input');
+
+            if (fileInput.files.length === 0) {
+                statusDiv.style.color = "red";
+                statusDiv.textContent = "Please select a file first.";
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('mediaFile', file);
+
+            statusDiv.style.color = "blue";
+            statusDiv.textContent = "Uploading file...";
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/upload-media`, {
+                    method: 'POST',
+                    body: formData 
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    statusDiv.style.color = "green";
+                    statusDiv.textContent = "File uploaded successfully!";
+                    
+                    let generatedTag = "";
+                    if (file.type.startsWith('video/')) {
+                        generatedTag = `<video src="${data.url}" controls autoplay loop style="max-width:100%; display:block; margin:0 auto;"></video>`;
+                    } else if (file.type.startsWith('audio/')) {
+                        generatedTag = `<audio src="${data.url}" controls autoplay style="display:block; margin:20px auto;"></audio>`;
+                    } else if (file.type.startsWith('image/')) {
+                        generatedTag = `<img src="${data.url}" style="max-width:100%; display:block; margin:0 auto;" />`;
+                    } else if (file.name.endsWith('.html')) {
+                        generatedTag = `<iframe src="${data.url}" style="width:100%; height:100vh; border:none;"></iframe>`;
+                    }
+
+                    htmlTextarea.value += "\n" + generatedTag;
+                } else {
+                    statusDiv.style.color = "red";
+                    statusDiv.textContent = data.error || "Upload failed.";
+                }
+            } catch (err) {
+                statusDiv.style.color = "red";
+                statusDiv.textContent = "Network error during upload.";
+            }
+        }
+
+        async function publishContent() {
+            const htmlContent = document.getElementById('html-input').value;
+            const statusDiv = document.getElementById('upload-status');
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/content`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ html: htmlContent, password: storedPassword })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    statusDiv.style.color = "green";
+                    statusDiv.textContent = "Published live successfully!";
+                } else {
+                    statusDiv.style.color = "red";
+                    statusDiv.textContent = data.error || "Failed to publish.";
+                }
+            } catch (error) {
+                statusDiv.style.color = "red";
+                statusDiv.textContent = "Error updating live content.";
+            }
+        }
+    </script>
+</body>
+</html>
