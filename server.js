@@ -6,8 +6,11 @@ const cors = require('cors');
 
 const app = express();
 
+// Optional: restrict CORS to your frontend or keep it open
 app.use(cors());
 app.use(express.json());
+
+const BACKEND_URL = process.env.BACKEND_URL || 'https://open-1-odlv.onrender.com';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -16,9 +19,8 @@ cloudinary.config({
 });
 
 const upload = multer({ storage: multer.memoryStorage() });
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "MYspace@5055";
 
-// In-memory storage for the live html content
 let currentLiveContent = "";
 
 app.post('/api/login', (req, res) => {
@@ -69,7 +71,6 @@ app.post('/api/upload-media', upload.single('mediaFile'), async (req, res) => {
     }
 });
 
-// Save and retrieve live content
 app.post('/api/content', (req, res) => {
     try {
         const { html, password } = req.body;
@@ -89,5 +90,5 @@ app.get('/api/content', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT} (Public URL: ${BACKEND_URL})`);
 });
