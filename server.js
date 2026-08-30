@@ -16,7 +16,7 @@ app.use(cors({
 
 app.use(express.json());
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://myspace-rlak.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://open-jad2.onrender.com';
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
