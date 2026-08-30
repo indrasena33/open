@@ -6,16 +6,25 @@ const cors = require('cors');
 
 const app = express();
 
-// Optional: restrict CORS to your frontend or keep it open
-app.use(cors());
+// --- FIXED CORS CONFIGURATION ---
+const corsOptions = {
+    origin: ['https://indrasena33.github.io', 'http://localhost:3000'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enables pre-flight requests for all routes
+
 app.use(express.json());
 
-const BACKEND_URL = process.env.BACKEND_URL || 'https://open-1-odlv.onrender.com';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://myspace-rlak.onrender.com';
 
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 const upload = multer({ storage: multer.memoryStorage() });
