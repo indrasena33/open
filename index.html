@@ -14,13 +14,12 @@
 
     <div id="container">
         <div class="welcome">
-            <h2>Waiting for content...</h2>
-            <p>Upload files or content through your admin panel.</p>
+            <h2>Content is coming soon...</h2>
+            <p>Let admin post it.</p>
         </div>
     </div>
 
     <script>
-        // MUST BE your active backend URL, not myspace-rlak.onrender.com
         const RENDER_API_URL = 'https://open-jad2.onrender.com/api/content';
         let lastHtmlContent = "";
 
@@ -37,7 +36,8 @@
                     lastHtmlContent = htmlContent;
                     const container = document.getElementById('container');
                     
-                    container.innerHTML = `<iframe sandbox="allow-scripts allow-same-origin allow-popups"></iframe>`;
+                    // Fixed sandbox warning by removing 'allow-same-origin'
+                    container.innerHTML = `<iframe sandbox="allow-scripts allow-popups"></iframe>`;
                     const iframe = container.querySelector('iframe');
                     iframe.srcdoc = htmlContent;
                 }

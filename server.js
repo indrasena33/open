@@ -6,8 +6,6 @@ const cors = require('cors');
 
 const app = express();
 
-// --- FULLY OPEN CORS CONFIGURATION ---
-// This allows requests from any origin (including your GitHub Pages site) and properly handles preflight OPTIONS requests.
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -83,6 +81,7 @@ app.post('/api/content', (req, res) => {
         if (password !== ADMIN_PASSWORD) {
             return res.status(401).json({ success: false, error: "Unauthorized" });
         }
+        // Overwrites old content completely with the new submission
         currentLiveContent = html;
         return res.status(200).json({ success: true });
     } catch (err) {
