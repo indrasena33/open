@@ -25,7 +25,19 @@ cloudinary.config({
 const upload = multer({ storage: multer.memoryStorage() });
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "MYspace@5055";
 
-let currentLiveContent = "";
+// Helper function to stream buffer data to Cloudinary
+const streamUpload = (fileBuffer, options) => {
+    return new Promise((resolve, reject) => {
+        let stream = cloudinary.uploader.upload_stream(
+            options,
+            (error, result) => {
+                if (result) resolve(result);
+                else reject(error);
+            }
+        );
+        streamifier.createReadStream(fileBuffer).pipe(stream);
+    });
+};
 
 app.post('/api/login', (req, res) => {
     try {
@@ -46,51 +58,61 @@ app.post('/api/upload-media', upload.single('mediaFile'), async (req, res) => {
             return res.status(400).json({ success: false, error: "No file provided." });
         }
 
-        let streamUpload = (fileBuffer) => {
-            return new Promise((resolve, reject) => {
-                let stream = cloudinary.uploader.upload_stream(
-                    { resource_type: "auto" },
-                    (error, result) => {
-                        if (result) {
-                            resolve(result);
-                        } else {
-                            reject(error);
-                        }
-                    }
-                );
-                streamifier.createReadStream(fileBuffer).pipe(stream);
-            });
-        };
-
-        let result = await streamUpload(req.file.buffer);
+        let result = await streamUpload(req.file.buffer, { resource_type: "auto", folder: "live_display_media" });
 
         return res.status(200).json({
             success: true,
             url: result.secure_url
         });
-
     } catch (err) {
         console.error("Backend Upload Error:", err);
         return res.status(500).json({ success: false, error: err.message || "Server crash during upload." });
     }
 });
 
-app.post('/api/content', (req, res) => {
+// Publish HTML content permanently by saving it as a file on Cloudinary
+app.post('/api/content', async (req, res) => {
     try {
         const { html, password } = req.body;
         if (password !== ADMIN_PASSWORD) {
             return res.status(401).json({ success: false, error: "Unauthorized" });
         }
-        // Overwrites old content completely with the new submission
-        currentLiveContent = html;
-        return res.status(200).json({ success: true });
+
+        // Convert the HTML string into a buffer file stream
+        const buffer = Buffer.from(html, 'utf-8');
+        
+        // Upload/Overwrite live_content.html on Cloudinary
+        const result = await streamUpload(buffer, {
+            resource_type: "raw",
+            public_id: "live_display_content/active_content",
+            overwrite: true,
+            invalidate: true
+        });
+
+        return res.status(200).json({ success: true, url: result.secure_url });
     } catch (err) {
+        console.error("Publish Error:", err);
         return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-app.get('/api/content', (req, res) => {
-    return res.status(200).json({ html: currentLiveContent });
+// Fetch the current live content URL or fetch the HTML file text directly from Cloudinary
+app.get('/api/content', async (req, res) => {
+    try {
+        // Construct the permanent raw file URL on Cloudinary
+        // Format: https://res.cloudinary.com/<cloud_name>/raw/upload/v1/live_display_content/active_content
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const htmlUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/live_display_content/active_content?ts=${Date.now()}`;
+        
+        const response = await fetch(htmlUrl);
+        if (!response.ok) {
+            return res.status(200).json({ html: "" }); // No content published yet
+        }
+        const htmlContent = await response.text();
+        return res.status(200).json({ html: htmlContent });
+    } catch (err) {
+        return res.status(200).json({ html: "" });
+    }
 });
 
 const PORT = process.env.PORT || 3000;

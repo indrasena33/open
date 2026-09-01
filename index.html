@@ -21,25 +21,33 @@
 
     <script>
         const RENDER_API_URL = 'https://open-jad2.onrender.com/api/content';
-        let lastHtmlContent = "";
+        let lastHtmlContent = localStorage.getItem('cached_live_content') || "";
+
+        if (lastHtmlContent) {
+            renderContent(lastHtmlContent);
+        }
+
+        function renderContent(htmlContent) {
+            const container = document.getElementById('container');
+            if (container.querySelector('iframe') && container.dataset.rendered === htmlContent) return;
+            
+            container.dataset.rendered = htmlContent;
+            container.innerHTML = `<iframe sandbox="allow-scripts allow-popups"></iframe>`;
+            const iframe = container.querySelector('iframe');
+            iframe.srcdoc = htmlContent;
+        }
 
         async function loadLatestContent() {
             try {
                 const response = await fetch(RENDER_API_URL);
-                if (!response.ok) {
-                    throw new Error(`Server responded with status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Status: ${response.status}`);
                 const data = await response.json();
                 const htmlContent = data.html;
                 
                 if (htmlContent && htmlContent !== lastHtmlContent) {
                     lastHtmlContent = htmlContent;
-                    const container = document.getElementById('container');
-                    
-                    // Fixed sandbox warning by removing 'allow-same-origin'
-                    container.innerHTML = `<iframe sandbox="allow-scripts allow-popups"></iframe>`;
-                    const iframe = container.querySelector('iframe');
-                    iframe.srcdoc = htmlContent;
+                    localStorage.setItem('cached_live_content', htmlContent);
+                    renderContent(htmlContent);
                 }
             } catch (error) {
                 console.error("Error loading content:", error);
@@ -47,7 +55,7 @@
         }
 
         loadLatestContent();
-        setInterval(loadLatestContent, 5000);
+        setInterval(loadLatestContent, 10000);
     </script>
 </body>
 </html>
